@@ -22,7 +22,7 @@ jobs:
           $ipV4 = Invoke-WebRequest -Uri "https://www.cloudflare-cn.com/ips-v4/" -UseBasicParsing
           $ipV6 = Invoke-WebRequest -Uri "https://www.cloudflare.com/ips-v6/" -UseBasicParsing
           $ipV4.Content + "`n" + $ipV6.Content | Out-File -FilePath ip.txt -Encoding utf8
-        shell: pwsh
+        shell: powershell
 
       - name: Make script executable and install dependencies
         run: |
@@ -32,19 +32,19 @@ jobs:
             exit 1
           }
           pip install pandas
-        shell: pwsh
+        shell: powershell
 
       - name: Run TLS scan
         run: |
           .\CloudflareST.exe -tp 443 -n 1000
           python convert_csv_to_tls.py
-        shell: pwsh
+        shell: powershell
 
       - name: Run notls scan
         run: |
           .\CloudflareST.exe -tp 80 -n 1000
           python convert_csv_to_tls.py notls
-        shell: pwsh
+        shell: powershell
 
       - name: Commit and push changes
         env:
@@ -59,4 +59,4 @@ jobs:
             git commit -m "Update IP list"
             git push
           }
-        shell: pwsh
+        shell: powershell
