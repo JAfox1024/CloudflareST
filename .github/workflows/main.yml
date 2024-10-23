@@ -36,15 +36,15 @@ jobs:
 
       - name: Run TLS scan
         run: |
-          .\CloudflareST.exe -tp 443 -n 1000
+          .\CloudflareST.exe -tp 443 -n 1000 -dn 20 -tl 500
           python convert_csv_to_tls.py
         shell: powershell
 
-      - name: Run notls scan
-        run: |
-          .\CloudflareST.exe -tp 80 -n 1000
-          python convert_csv_to_tls.py notls
-        shell: powershell
+      # - name: Run notls scan
+      #   run: |
+      #     .\CloudflareST.exe -tp 80 -n 1000 -dn 20
+      #     python convert_csv_to_tls.py notls
+      #   shell: powershell
 
       - name: Commit and push changes
         env:
