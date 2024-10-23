@@ -2,7 +2,7 @@ name: CI
 
 on:
   schedule:
-    - cron: '* */4 * * *'
+    - cron: '* */4 * * *'  # 每四小时运行一次
   workflow_dispatch:
 
 permissions:
@@ -18,39 +18,45 @@ jobs:
 
       - name: Download IP list
         run: |
-          set -e  # 出现错误时停止执行
-          rm -f ip.txt
-          {
-            wget -qO- https://www.cloudflare-cn.com/ips-v4/#
-            echo ""
-            wget -qO- https://www.cloudflare.com/ips-v6/#
-          } | tee -a ip.txt
+          Remove-Item -Force -ErrorAction SilentlyContinue ip.txt
+          $ipV4 = Invoke-WebRequest -Uri "https://www.cloudflare-cn.com/ips-v4/" -UseBasicParsing
+          $ipV6 = Invoke-WebRequest -Uri "https://www.cloudflare.com/ips-v6/" -UseBasicParsing
+          $ipV4.Content + "`n" + $ipV6.Content | Out-File -FilePath ip.txt -Encoding utf8
+        shell: pwsh
 
       - name: Make script executable and install dependencies
         run: |
-          set -e
-          chmod +x CloudflareST
+          # Windows 不需要设置可执行权限，但可以确保文件存在
+          if (-Not (Test-Path CloudflareST)) {
+            Write-Host "CloudflareST not found!"
+            exit 1
+          }
           pip install pandas
+        shell: pwsh
 
       - name: Run TLS scan
         run: |
-          set -e
-          ./CloudflareST -tp 443 -n 1000
+          .\CloudflareST.exe -tp 443 -n 1000
           python convert_csv_to_tls.py
+        shell: pwsh
 
       - name: Run notls scan
         run: |
-          set -e
-          ./CloudflareST -tp 80 -n 1000
+          .\CloudflareST.exe -tp 80 -n 1000
           python convert_csv_to_tls.py notls
+        shell: pwsh
 
       - name: Commit and push changes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -e
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add *.txt
-          git commit -m "Update IP list"
-          git push
+          if (git diff --quiet *.txt) {
+            Write-Host "No changes to commit."
+          } else {
+            git add *.txt
+            git commit -m "Update IP list"
+            git push
+          }
+        shell: pwsh
