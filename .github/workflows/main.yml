@@ -16,6 +16,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas
+        shell: powershell
+
       - name: Download IP list
         run: |
           Remove-Item -Force -ErrorAction SilentlyContinue ip.txt
@@ -24,27 +30,17 @@ jobs:
           $ipV4.Content + "`n" + $ipV6.Content | Out-File -FilePath ip.txt -Encoding utf8
         shell: powershell
 
-      - name: Make script executable and install dependencies
-        run: |
-          # Windows 不需要设置可执行权限，但可以确保文件存在
-          if (-Not (Test-Path CloudflareST)) {
-            Write-Host "CloudflareST not found!"
-            exit 1
-          }
-          pip install pandas
-        shell: powershell
-
       - name: Run TLS scan
         run: |
-          .\CloudflareST.exe -tp 443 -n 1000 -dn 20 -tl 500
-          python convert_csv_to_tls.py
+          .\CloudflareST.exe -tp 443 -n 1000 -o result.csv
+          python .\convert_csv_to_tls.py
         shell: powershell
 
-      # - name: Run notls scan
-      #   run: |
-      #     .\CloudflareST.exe -tp 80 -n 1000 -dn 20
-      #     python convert_csv_to_tls.py notls
-      #   shell: powershell
+      - name: Run notls scan
+        run: |
+          .\CloudflareST.exe -tp 80 -n 1000 -o result.csv
+          python .\convert_csv_to_tls.py notls
+        shell: powershell
 
       - name: Commit and push changes
         env:
